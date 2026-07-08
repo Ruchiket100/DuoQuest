@@ -26,6 +26,10 @@ export async function apiRequest<T>(
   const headers: HeadersInit = {
     ...options.headers,
   };
+  const token = localStorage.getItem("session_token");
+  if (token) {
+    (headers as any)["Authorization"] = `Bearer ${token}`;
+  }
   if (!(options.body instanceof FormData)) {
     (headers as any)["Content-Type"] = (headers as any)["Content-Type"] || "application/json";
   }
@@ -93,9 +97,15 @@ export const api = {
     apiRequest<T>(endpoint, { ...options, method: "DELETE" }),
   upload: <T>(endpoint: string, formData: FormData) => {
     const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
+    const token = localStorage.getItem("session_token");
+    const headers: HeadersInit = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
     return fetch(url, {
       method: "POST",
       credentials: "include",
+      headers,
       body: formData,
     }).then(async (res) => {
       const result = await res.json();

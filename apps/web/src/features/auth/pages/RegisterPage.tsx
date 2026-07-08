@@ -37,6 +37,11 @@ export function RegisterPage() {
         displayName: displayName || username,
       });
 
+      const token = response.token || response.session?.token;
+      if (token) {
+        localStorage.setItem("session_token", token);
+      }
+
       setUser(response.user);
       addToast("Account created successfully!", "success");
       navigate("/onboarding");

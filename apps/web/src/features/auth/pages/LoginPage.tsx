@@ -31,6 +31,11 @@ export function LoginPage() {
         password,
       });
 
+      const token = response.token || response.session?.token;
+      if (token) {
+        localStorage.setItem("session_token", token);
+      }
+
       setUser(response.user);
       addToast("Welcome back!", "success");
       navigate("/");
