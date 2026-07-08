@@ -1,0 +1,152 @@
+import fp from "fastify-plugin";
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { fromNodeHeaders } from "better-auth/node";
+import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import type { Session, User } from "better-auth";
+
+// Extend Fastify types for auth
+declare module "fastify" {
+  interface FastifyInstance {
+    auth: any;
+  }
+  interface FastifyRequest {
+    user: User | null;
+    session: Session | null;
+  }
+}
+
+export default fp(async (app: FastifyInstance) => {
+  const auth = betterAuth({
+    database: prismaAdapter(app.prisma, { provider: "postgresql" }),
+    baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3001",
+    secret: process.env.BETTER_AUTH_SECRET || "dev-secret-change-me",
+    trustedOrigins: ["http://localhost:5173"],
+    emailAndPassword: {
+      enabled: true,
+    },
+    session: {
+      expiresIn: 60 * 60 * 24 * 7, // 7 days
+      updateAge: 60 * 60 * 24, // 1 day
+      cookieCache: {
+        enabled: true,
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      },
+    },
+    user: {
+      additionalFields: {
+        username: {
+          type: "string",
+          required: true,
+          unique: true,
+        },
+        displayName: {
+          type: "string",
+          required: false,
+        },
+        avatarUrl: {
+          type: "string",
+          required: false,
+        },
+        xp: {
+          type: "number",
+          required: false,
+          defaultValue: 0,
+        },
+        level: {
+          type: "number",
+          required: false,
+          defaultValue: 1,
+        },
+        theme: {
+          type: "string",
+          required: false,
+          defaultValue: "default",
+        },
+      },
+    },
+  });
+
+  // Decorate Fastify instance with auth
+  app.decorate("auth", auth);
+
+  // Catch-all route for Better Auth
+  app.route({
+    method: ["GET", "POST"],
+    url: "/api/auth/*",
+    async handler(request: FastifyRequest, reply: FastifyReply) {
+      const url = new URL(
+        request.url,
+        `http://${request.headers.host || "localhost:3001"}`
+      );
+
+      const req = new Request(url.toString(), {
+        method: request.method,
+        headers: fromNodeHeaders(request.headers),
+        body:
+          request.method !== "GET" ? JSON.stringify(request.body) : undefined,
+      });
+
+      const response = await auth.handler(req);
+
+      // Forward status
+      reply.status(response.status);
+
+      // Forward headers
+      response.headers.forEach((value: string, key: string) => {
+        reply.header(key, value);
+      });
+
+      // Forward body
+      if (response.body) {
+        const text = await response.text();
+        return reply.send(text);
+      }
+
+      return reply.send(null);
+    },
+  });
+
+  // Auth middleware — adds user and session to request
+  app.decorateRequest("user", null);
+  app.decorateRequest("session", null);
+
+  app.log.info("🔐 Authentication configured");
+});
+
+/**
+ * Pre-handler hook to require authentication on specific routes
+ */
+export async function requireAuth(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const app = request.server;
+
+  try {
+    const session = await app.auth.api.getSession({
+      headers: fromNodeHeaders(request.headers),
+    });
+
+    if (!session) {
+      return reply.status(401).send({
+        success: false,
+        error: {
+          code: "UNAUTHORIZED",
+          message: "Authentication required",
+        },
+      });
+    }
+
+    request.user = session.user;
+    request.session = session.session;
+  } catch {
+    return reply.status(401).send({
+      success: false,
+      error: {
+        code: "UNAUTHORIZED",
+        message: "Invalid session",
+      },
+    });
+  }
+}

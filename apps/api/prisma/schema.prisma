@@ -1,0 +1,418 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users ──────────────────────────────────────────────
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  username      String   @unique
+  displayName   String?
+  avatarUrl     String?
+  xp            Int      @default(0)
+  level         Int      @default(1)
+  theme         String   @default("default")
+  pushToken     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+
+  // Duo Space membership
+  duoMemberships DuoMember[]
+
+  // Goals & Tasks
+  goals Goal[]
+  tasks Task[]
+  taskCompletions TaskCompletion[]
+
+  // Social
+  messagesSent Message[]
+  checkIns     CheckIn[]
+  achievements UserAchievement[]
+
+  // Challenges
+  challengeParticipations ChallengeParticipant[]
+  journalEntries          JournalEntry[]
+
+  // Activity tracking
+  activityLogs ActivityLog[]
+
+  // Notifications
+  notifications Notification[]
+
+  @@map("users")
+}
+
+// ─── Duo Spaces ─────────────────────────────────────────
+model DuoSpace {
+  id         String   @id @default(cuid())
+  name       String
+  inviteCode String   @unique @default(cuid())
+  level      Int      @default(1)
+  totalXp    Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  members    DuoMember[]
+  goals      Goal[]
+  tasks      Task[]
+  messages   Message[]
+  challenges Challenge[]
+  checkIns   CheckIn[]
+  journalEntries JournalEntry[]
+
+  @@map("duo_spaces")
+}
+
+model DuoMember {
+  id         String   @id @default(cuid())
+  userId     String
+  duoSpaceId String
+  role       String   @default("member")
+  joinedAt   DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duoSpace DuoSpace @relation(fields: [duoSpaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, duoSpaceId])
+  @@index([userId])
+  @@index([duoSpaceId])
+  @@map("duo_members")
+}
+
+// ─── Goals ──────────────────────────────────────────────
+model Goal {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  type        String    // "personal" | "shared"
+  progress    Int       @default(0)
+  status      String    @default("active")
+  dueDate     DateTime?
+  userId      String
+  duoSpaceId  String
+  icon        String?
+  color       String?
+  imageUrl    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duoSpace   DuoSpace   @relation(fields: [duoSpaceId], references: [id], onDelete: Cascade)
+  milestones Milestone[]
+  notes      GoalNote[]
+  tasks      Task[]
+
+  @@index([userId])
+  @@index([duoSpaceId])
+  @@map("goals")
+}
+
+model Milestone {
+  id          String    @id @default(cuid())
+  title       String
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  goalId      String
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@map("milestones")
+}
+
+model GoalNote {
+  id        String   @id @default(cuid())
+  content   String
+  goalId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@map("goal_notes")
+}
+
+// ─── Tasks ──────────────────────────────────────────────
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  type        String    // "personal" | "shared"
+  recurring   String?   // "daily" | "weekly" | null
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  dueDate     DateTime?
+  userId      String
+  duoSpaceId  String
+  goalId      String?
+  daysOfWeek  String?   // comma-separated days, e.g. "mon,wed,fri"
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duoSpace    DuoSpace         @relation(fields: [duoSpaceId], references: [id], onDelete: Cascade)
+  goal        Goal?            @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  completions TaskCompletion[]
+
+  @@index([userId])
+  @@index([duoSpaceId])
+  @@index([createdAt])
+  @@map("tasks")
+}
+
+model TaskCompletion {
+  id          String   @id @default(cuid())
+  taskId      String
+  userId      String
+  completedAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId])
+  @@index([completedAt])
+  @@map("task_completions")
+}
+
+// ─── Messages ───────────────────────────────────────────
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  type       String   @default("text")
+  senderId   String
+  duoSpaceId String
+  createdAt  DateTime @default(now())
+
+  sender    User              @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  duoSpace  DuoSpace          @relation(fields: [duoSpaceId], references: [id], onDelete: Cascade)
+  reactions MessageReaction[]
+
+  @@index([duoSpaceId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  emoji     String
+  userId    String
+  messageId String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId, emoji])
+  @@map("message_reactions")
+}
+
+// ─── Challenges ─────────────────────────────────────────
+model Challenge {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  type        String   // "fitness" | "coding" | "reading" | "custom"
+  targetDays  Int
+  startDate   DateTime
+  endDate     DateTime
+  status      String   @default("active")
+  duoSpaceId  String
+  icon        String?
+  color       String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  duoSpace     DuoSpace               @relation(fields: [duoSpaceId], references: [id], onDelete: Cascade)
+  participants ChallengeParticipant[]
+
+  @@index([duoSpaceId])
+  @@map("challenges")
+}
+
+model ChallengeParticipant {
+  id            String    @id @default(cuid())
+  challengeId   String
+  userId        String
+  daysCompleted Int       @default(0)
+  lastCheckIn   DateTime?
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@map("challenge_participants")
+}
+
+// ─── Check-Ins ──────────────────────────────────────────
+model CheckIn {
+  id         String   @id @default(cuid())
+  userId     String
+  duoSpaceId String
+  answer1    String
+  answer2    String
+  answer3    String
+  aiSummary  String?
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duoSpace DuoSpace @relation(fields: [duoSpaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([duoSpaceId])
+  @@index([createdAt])
+  @@map("check_ins")
+}
+
+// ─── Achievements ───────────────────────────────────────
+model Achievement {
+  id          String @id @default(cuid())
+  key         String @unique
+  title       String
+  description String
+  icon        String
+  xpReward    Int
+  category    String // "tasks" | "streaks" | "social" | "goals"
+
+  users UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+// ─── Activity & Stats ───────────────────────────────────
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String
+  duoSpaceId String?
+  action     String
+  metadata   Json?
+  xpEarned   Int      @default(0)
+  date       DateTime @default(now()) @db.Date
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
+  @@index([userId, date])
+  @@map("activity_logs")
+}
+
+model Streak {
+  id             String    @id @default(cuid())
+  userId         String
+  duoSpaceId     String?
+  currentDays    Int       @default(0)
+  longestDays    Int       @default(0)
+  lastActiveDate DateTime? @db.Date
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([userId, duoSpaceId])
+  @@map("streaks")
+}
+
+// ─── Better Auth Models ─────────────────────────────────
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verifications")
+}
+
+// ─── Notifications ──────────────────────────────────────
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "achievement" | "level_up" | "nudge" | "challenge" | "system"
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+// ─── Journal Entries ─────────────────────────────────────
+model JournalEntry {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  type        String   // "shared" | "private"
+  userId      String
+  duoSpaceId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duoSpace    DuoSpace @relation(fields: [duoSpaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([duoSpaceId])
+  @@map("journal_entries")
+}
