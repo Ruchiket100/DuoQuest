@@ -58,10 +58,6 @@ export default fp(async (app: FastifyInstance) => {
         maxAge: 60 * 60 * 24 * 7, // 7 days
       },
     },
-    cookie: betterAuthUrl.startsWith("https://") ? {
-      sameSite: "none",
-      secure: true,
-    } : undefined,
     user: {
       additionalFields: {
         username: {
@@ -98,6 +94,20 @@ export default fp(async (app: FastifyInstance) => {
       ipAddress: {
         ipAddressHeaders: ["x-forwarded-for"],
       },
+      cookies: betterAuthUrl.startsWith("https://") ? {
+        session_token: {
+          attributes: {
+            sameSite: "none",
+            secure: true,
+          },
+        },
+        session_data: {
+          attributes: {
+            sameSite: "none",
+            secure: true,
+          },
+        },
+      } : undefined,
     },
     logger: {
       level: "debug",
