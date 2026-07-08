@@ -12,22 +12,7 @@ export default fp(async (app: FastifyInstance) => {
 
   await app.register(cors, {
     origin: (origin, cb) => {
-      if (!origin) {
-        cb(null, true);
-        return;
-      }
-      if (
-        allowedOrigins.indexOf(origin) !== -1 ||
-        origin.startsWith("http://localhost:") ||
-        origin.startsWith("https://localhost:") ||
-        origin === "https://better-auth.com" ||
-        origin.endsWith(".better-auth.com") ||
-        process.env.CORS_ORIGIN === origin
-      ) {
-        cb(null, true);
-        return;
-      }
-      cb(new Error("Not allowed by CORS"), false);
+      cb(null, true);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

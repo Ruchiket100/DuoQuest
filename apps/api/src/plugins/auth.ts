@@ -96,6 +96,12 @@ export default fp(async (app: FastifyInstance) => {
         ipAddressHeaders: ["x-forwarded-for"],
       },
     },
+    logger: {
+      level: "debug",
+      to: (level, message, ...args) => {
+        app.log.info({ level, args }, `[Better Auth]: ${message}`);
+      },
+    },
   });
 
   // Decorate Fastify instance with auth
