@@ -20,6 +20,8 @@ export default fp(async (app: FastifyInstance) => {
         allowedOrigins.indexOf(origin) !== -1 ||
         origin.startsWith("http://localhost:") ||
         origin.startsWith("https://localhost:") ||
+        origin === "https://better-auth.com" ||
+        origin.endsWith(".better-auth.com") ||
         process.env.CORS_ORIGIN === origin
       ) {
         cb(null, true);
