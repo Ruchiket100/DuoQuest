@@ -76,6 +76,11 @@ export default fp(async (app: FastifyInstance) => {
         },
       },
     },
+    advanced: {
+      ipAddress: {
+        ipAddressHeaders: ["x-forwarded-for"],
+      },
+    },
   });
 
   // Decorate Fastify instance with auth
