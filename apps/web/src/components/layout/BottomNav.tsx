@@ -43,7 +43,7 @@ export function BottomNav() {
   const floatingNavs = location.pathname !== "/";
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-16 z-40 glass-nav flex items-center justify-around px-2 pb-safe">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md h-16 z-40 glass-nav flex items-center justify-around px-2 pb-safe">
       {navItems.map(({ to, icon: Icon, label }) => (
         <NavLink
           key={to}
@@ -68,7 +68,7 @@ export function BottomNav() {
         hidden={floatingNavs}
         className={({ isActive }) =>
           cn(
-            "fixed bottom-32 right-6 w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 shadow-float z-45 border cursor-pointer",
+            "absolute bottom-32 right-6 w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 shadow-float z-45 border cursor-pointer",
             isActive
               ? "bg-purple-warm border-purple-deep text-white"
               : "bg-black-elevated border-white/10 text-white-muted hover:text-white"
@@ -89,7 +89,7 @@ export function BottomNav() {
         hidden={floatingNavs}
         className={({ isActive }) =>
           cn(
-            "fixed bottom-20 right-6 w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 shadow-float z-45 border cursor-pointer",
+            "absolute bottom-20 right-6 w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 shadow-float z-45 border cursor-pointer",
             isActive
               ? "bg-purple-warm border-purple-deep text-white"
               : "bg-black-elevated border-white/10 text-white-muted hover:text-white"

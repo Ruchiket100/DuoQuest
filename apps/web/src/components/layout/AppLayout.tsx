@@ -53,13 +53,15 @@ export function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-black-deep flex flex-col pb-16">
-      <Header />
-      <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-6">
-        <Outlet />
-      </main>
-      <BottomNav />
-      <ToastContainer />
+    <div className="min-h-screen bg-zinc-950 flex justify-center overflow-x-hidden">
+      <div className="w-full max-w-md min-h-screen bg-black-deep flex flex-col relative pb-16 border-x border-white/5 shadow-2xl">
+        <Header />
+        <main className="flex-1 w-full px-4 py-6">
+          <Outlet />
+        </main>
+        <BottomNav />
+        <ToastContainer />
+      </div>
     </div>
   );
 }
