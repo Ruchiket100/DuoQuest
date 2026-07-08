@@ -18,10 +18,24 @@ declare module "fastify" {
 }
 
 export default fp(async (app: FastifyInstance) => {
+  let betterAuthUrl = process.env.BETTER_AUTH_URL || "http://localhost:3001";
+  let betterAuthSecret = process.env.BETTER_AUTH_SECRET || "dev-secret-change-me";
+  let betterAuthApiKey = process.env.BETTER_AUTH_API_KEY;
+
+  if (betterAuthUrl) {
+    betterAuthUrl = betterAuthUrl.trim().replace(/^["']|["']$/g, "").replace(/^\\"|\\"$/g, "");
+  }
+  if (betterAuthSecret) {
+    betterAuthSecret = betterAuthSecret.trim().replace(/^["']|["']$/g, "").replace(/^\\"|\\"$/g, "");
+  }
+  if (betterAuthApiKey) {
+    betterAuthApiKey = betterAuthApiKey.trim().replace(/^["']|["']$/g, "").replace(/^\\"|\\"$/g, "");
+  }
+
   const auth = betterAuth({
     database: prismaAdapter(app.prisma, { provider: "postgresql" }),
-    baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3001",
-    secret: process.env.BETTER_AUTH_SECRET || "dev-secret-change-me",
+    baseURL: betterAuthUrl,
+    secret: betterAuthSecret,
     trustedOrigins: [
       "http://localhost:5173",
       "http://localhost",
@@ -30,7 +44,7 @@ export default fp(async (app: FastifyInstance) => {
     ],
     plugins: [
       dash({
-        apiKey: process.env.BETTER_AUTH_API_KEY,
+        apiKey: betterAuthApiKey,
       }),
     ],
     emailAndPassword: {
