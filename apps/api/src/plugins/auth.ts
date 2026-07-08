@@ -31,6 +31,10 @@ export default fp(async (app: FastifyInstance) => {
   if (betterAuthApiKey) {
     betterAuthApiKey = betterAuthApiKey.trim().replace(/^["']|["']$/g, "").replace(/^\\"|\\"$/g, "");
   }
+  const additionalOrigins = process.env.TRUSTED_ORIGINS
+    ? process.env.TRUSTED_ORIGINS.split(",").map(o => o.trim())
+    : [];
+
   const auth = betterAuth({
     database: prismaAdapter(app.prisma, { provider: "postgresql" }),
     baseURL: betterAuthUrl,
@@ -40,7 +44,8 @@ export default fp(async (app: FastifyInstance) => {
       "http://localhost",
       "https://localhost",
       "capacitor://localhost",
-      "https://duoquest-ap.onrender.com"
+      "https://duoquest-ap.onrender.com",
+      ...additionalOrigins
     ],
     plugins: [
       dash({
