@@ -98,6 +98,56 @@ export default async function journalRoutes(app: FastifyInstance) {
     }
   );
 
+  // Get a single journal entry by ID
+  app.get<{ Params: { id: string } }>(
+    "/api/journal/:id",
+    { preHandler: requireAuth },
+    async (request) => {
+      const { id } = request.params;
+      const userId = request.user!.id;
+
+      const entry = await app.prisma.journalEntry.findUnique({
+        where: { id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      });
+
+      if (!entry) {
+        throw new AppError(404, "NOT_FOUND", "Journal entry not found");
+      }
+
+      // Check authorization:
+      // If the entry is private, only the creator of the entry can fetch it.
+      if (entry.type === "private" && entry.userId !== userId) {
+        throw new AppError(403, "FORBIDDEN", "You are not authorized to view this private journal entry");
+      }
+
+      // Also ensure that if it is a shared entry, the current user is a member of the duo space where it belongs.
+      const membership = await app.prisma.duoMember.findUnique({
+        where: {
+          userId_duoSpaceId: {
+            userId,
+            duoSpaceId: entry.duoSpaceId,
+          },
+        },
+      });
+
+      if (!membership) {
+        throw new AppError(403, "FORBIDDEN", "You are not authorized to view this journal entry");
+      }
+
+      return { success: true, data: entry };
+    }
+  );
+
   // Edit a journal entry
   app.patch<{ Params: { id: string } }>(
     "/api/journal/:id",
