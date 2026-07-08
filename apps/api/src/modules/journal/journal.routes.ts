@@ -165,8 +165,23 @@ export default async function journalRoutes(app: FastifyInstance) {
         throw new AppError(404, "NOT_FOUND", "Journal entry not found");
       }
 
-      // Check authorization (only author can update)
-      if (entry.userId !== userId) {
+      // Check authorization:
+      // If the entry is private, only the creator of the entry can update it.
+      // If it is shared, any member of the duo space can update it.
+      if (entry.type === "private" && entry.userId !== userId) {
+        throw new AppError(403, "FORBIDDEN", "You are not authorized to edit this private journal entry");
+      }
+
+      const membership = await app.prisma.duoMember.findUnique({
+        where: {
+          userId_duoSpaceId: {
+            userId,
+            duoSpaceId: entry.duoSpaceId,
+          },
+        },
+      });
+
+      if (!membership) {
         throw new AppError(403, "FORBIDDEN", "You are not authorized to edit this journal entry");
       }
 

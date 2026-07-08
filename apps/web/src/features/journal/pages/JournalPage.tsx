@@ -8,6 +8,7 @@ import Card from "@/components/ui/Card.tsx";
 import Button from "@/components/ui/Button.tsx";
 import Badge from "@/components/ui/Badge.tsx";
 import Avatar from "@/components/ui/Avatar.tsx";
+import Modal from "@/components/ui/Modal.tsx";
 import api from "@/lib/api.ts";
 import { BookOpen, Plus, Lock, Users, Calendar, Trash2, Edit2 } from "lucide-react";
 import { cn } from "@/lib/utils.ts";
@@ -31,6 +32,7 @@ export function JournalPage() {
 
   const [activeTab, setActiveTab] = React.useState<"shared" | "private">("shared");
   const [randomPrompt, setRandomPrompt] = React.useState("");
+  const [deleteEntryId, setDeleteEntryId] = React.useState<string | null>(null);
 
   const duoSpaceId = activeDuoSpace?.id;
 
@@ -157,7 +159,7 @@ export function JournalPage() {
                     <Badge variant={entry.type === "private" ? "primary" : "secondary"}>
                       {entry.type === "private" ? "private" : "shared"}
                     </Badge>
-                    {entry.userId === user?.id && (
+                    {(entry.userId === user?.id || entry.type === "shared") && (
                       <div className="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-all duration-200">
                         <button
                           onClick={() => navigate(`/journal/edit/${entry.id}`)}
@@ -166,17 +168,15 @@ export function JournalPage() {
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
-                        <button
-                          onClick={() => {
-                            if (confirm("Delete this journal entry?")) {
-                              deleteMutation.mutate(entry.id);
-                            }
-                          }}
-                          className="p-1 rounded-card text-white-muted hover:text-red-accent hover:bg-red-accent/10 transition-colors cursor-pointer"
-                          title="Delete entry"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {entry.userId === user?.id && (
+                          <button
+                            onClick={() => setDeleteEntryId(entry.id)}
+                            className="p-1 rounded-card text-white-muted hover:text-red-accent hover:bg-red-accent/10 transition-colors cursor-pointer"
+                            title="Delete entry"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -191,6 +191,43 @@ export function JournalPage() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteEntryId}
+        onClose={() => setDeleteEntryId(null)}
+        title="Delete Journal Entry"
+      >
+        <div className="space-y-4 text-center">
+          <p className="text-sm text-white-muted">
+            Are you sure you want to delete this journal entry? This action cannot be undone.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button
+              variant="secondary"
+              onClick={() => setDeleteEntryId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="secondary"
+              className="bg-red-accent/10 hover:bg-red-accent/20 text-red-accent border-red-accent/20"
+              isLoading={deleteMutation.isPending}
+              onClick={() => {
+                if (deleteEntryId) {
+                  deleteMutation.mutate(deleteEntryId, {
+                    onSuccess: () => {
+                      setDeleteEntryId(null);
+                    },
+                  });
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
