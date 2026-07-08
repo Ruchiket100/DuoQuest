@@ -31,7 +31,6 @@ export default fp(async (app: FastifyInstance) => {
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   });
 
   app.log.info("🔒 CORS configured");
