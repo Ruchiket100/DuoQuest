@@ -153,10 +153,38 @@ export default fp(async (app: FastifyInstance) => {
         reply.header(key, value);
       });
 
-      // Forward body
+      let bodyText = "";
       if (response.body) {
-        const text = await response.text();
-        return reply.send(text);
+        bodyText = await response.text();
+      }
+
+      // Extract session token from Set-Cookie headers
+      let sessionToken: string | null = null;
+      const cookies = (response.headers as any).getSetCookie
+        ? (response.headers as any).getSetCookie()
+        : [response.headers.get("set-cookie")].filter(Boolean) as string[];
+
+      for (const cookie of cookies) {
+        const match = cookie.match(/better-auth\.session_token=([^;]+)/);
+        if (match) {
+          sessionToken = match[1];
+          break;
+        }
+      }
+
+      // Inject token into JSON response body if found
+      if (sessionToken && bodyText) {
+        try {
+          const json = JSON.parse(bodyText);
+          json.token = sessionToken;
+          bodyText = JSON.stringify(json);
+        } catch {
+          // Ignore JSON parse error for raw text responses
+        }
+      }
+
+      if (bodyText) {
+        return reply.send(bodyText);
       }
 
       return reply.send(null);
