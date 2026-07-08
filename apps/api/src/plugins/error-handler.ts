@@ -23,7 +23,7 @@ export default fp(async (app: FastifyInstance) => {
           error: {
             code: "VALIDATION_ERROR",
             message: "Validation failed",
-            details: error.errors.map((e) => ({
+            details: error.issues.map((e) => ({
               path: e.path.join("."),
               message: e.message,
             })),
