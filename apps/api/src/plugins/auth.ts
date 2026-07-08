@@ -100,7 +100,7 @@ export default fp(async (app: FastifyInstance) => {
       ipAddress: {
         ipAddressHeaders: ["x-forwarded-for"],
       },
-      cookies: betterAuthUrl.startsWith("https://") ? {
+      cookies: (betterAuthUrl.startsWith("https://") || process.env.NODE_ENV === "production") ? {
         session_token: {
           attributes: {
             sameSite: "none",
