@@ -1,4 +1,11 @@
 import fp from "fastify-plugin";
+import { z } from "zod";
+
+// Monkeypatch Zod for Better Auth Dash plugin compatibility (Zod 3 vs Zod 4)
+if (typeof (z as any).url !== "function") {
+  (z as any).url = () => z.string().url();
+}
+
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { fromNodeHeaders } from "better-auth/node";
