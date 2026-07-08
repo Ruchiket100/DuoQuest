@@ -141,13 +141,15 @@ export function ProfilePage() {
         {/* Avatar with upload overlay */}
         <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
           <Avatar src={user.avatarUrl} name={user.displayName || user.username} size="xl" />
-          <div className={`absolute inset-0 rounded-full flex items-center justify-center bg-black/50 transition-opacity duration-200 ${isUploadingAvatar ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-            {isUploadingAvatar ? (
+          {isUploadingAvatar ? (
+            <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50">
               <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Camera className="w-5 h-5 text-white" />
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="absolute bottom-0 right-0 bg-lime-soft text-black p-1.5 rounded-full shadow-md hover:scale-105 transition-transform z-10">
+              <Camera className="w-3.5 h-3.5" />
+            </div>
+          )}
           <input
             ref={fileInputRef}
             type="file"
