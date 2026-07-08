@@ -8,6 +8,7 @@ import Input from "@/components/ui/Input.tsx";
 import Button from "@/components/ui/Button.tsx";
 import Card from "@/components/ui/Card.tsx";
 import Avatar from "@/components/ui/Avatar.tsx";
+import { Camera } from "lucide-react";
 import type { DuoSpace } from "@duoquest/shared";
 
 export function OnboardingPage() {
@@ -21,11 +22,13 @@ export function OnboardingPage() {
   const [inviteCode, setInviteCode] = React.useState("");
 
   const [isLoading, setIsLoading] = React.useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = React.useState(false);
 
   const { user, setUser } = useAuthStore();
   const setActiveDuoSpace = useDuoSpaceStore((state) => state.setActiveDuoSpace);
   const addToast = useUIStore((state) => state.addToast);
   const navigate = useNavigate();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (user) {
@@ -34,6 +37,24 @@ export function OnboardingPage() {
       setTheme(user.theme || "default");
     }
   }, [user]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const result = await api.upload<{ avatarUrl: string }>("/api/users/avatar", formData);
+      setAvatarUrl(result.avatarUrl);
+      addToast("Avatar uploaded! 📸", "success");
+    } catch (err: any) {
+      addToast(err.message || "Failed to upload avatar", "error");
+    } finally {
+      setIsUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,17 +129,27 @@ export function OnboardingPage() {
               <p className="text-sm text-white-muted">How should your partner see you?</p>
             </div>
 
-            <form onSubmit={handleProfileSubmit} className="space-y-4">
-              <div className="flex flex-col items-center gap-2">
-                <Avatar src={avatarUrl} name={displayName || user?.username} size="lg" />
-                <Input
-                  id="avatarUrl"
-                  type="text"
-                  label="Avatar Image URL (Optional)"
-                  placeholder="https://images.unsplash.com/..."
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                />
+            <form onSubmit={handleProfileSubmit} className="space-y-6">
+              {/* Interactive Bucket Uploader */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                  <Avatar src={avatarUrl} name={displayName || user?.username} size="xl" />
+                  <div className={`absolute inset-0 rounded-full flex items-center justify-center bg-black/55 transition-opacity duration-200 ${isUploadingAvatar ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                    {isUploadingAvatar ? (
+                      <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <Camera className="w-5 h-5 text-white" />
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
+                </div>
+                <span className="text-xs text-white-muted">Tap profile image to upload avatar</span>
               </div>
 
               <Input
