@@ -45,6 +45,7 @@ export default fp(async (app: FastifyInstance) => {
       "https://localhost",
       "capacitor://localhost",
       "https://duoquest-ap.onrender.com",
+      "https://duo-quest-web.vercel.app",
       ...additionalOrigins
     ],
     plugins: [
