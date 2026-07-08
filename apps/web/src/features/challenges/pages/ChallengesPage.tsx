@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button.tsx";
 import Modal from "@/components/ui/Modal.tsx";
 import Input from "@/components/ui/Input.tsx";
 import Badge from "@/components/ui/Badge.tsx";
+import Avatar from "@/components/ui/Avatar.tsx";
 import api from "@/lib/api.ts";
 import { Trophy, Plus, Flame, CheckCircle2, Clock, Zap } from "lucide-react";
 import { cn } from "@/lib/utils.ts";
@@ -54,12 +55,15 @@ export default function ChallengesPage() {
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [title, setTitle] = React.useState("");
+  const [description, setDescription] = React.useState("");
   const [type, setType] = React.useState<string>("custom");
   const [targetDays, setTargetDays] = React.useState(7);
   const [selectedEmoji, setSelectedEmoji] = React.useState("🔥");
   const [selectedColor, setSelectedColor] = React.useState("lime");
   const [coverImageFile, setCoverImageFile] = React.useState<File | null>(null);
   const [uploadingImage, setUploadingImage] = React.useState(false);
+
+  const [selectedChallenge, setSelectedChallenge] = React.useState<Challenge | null>(null);
 
   const duoSpaceId = activeDuoSpace?.id;
 
@@ -70,12 +74,13 @@ export default function ChallengesPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: { title: string; type: string; targetDays: number; icon?: string; color?: string; imageUrl?: string | null }) =>
+    mutationFn: (data: { title: string; description: string; type: string; targetDays: number; icon?: string; color?: string; imageUrl?: string | null }) =>
       api.post(`/api/duo-spaces/${duoSpaceId}/challenges`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["challenges", duoSpaceId] });
       setIsCreateOpen(false);
       setTitle("");
+      setDescription("");
       setSelectedEmoji("🔥");
       setSelectedColor("lime");
       setCoverImageFile(null);
@@ -107,6 +112,7 @@ export default function ChallengesPage() {
 
     createMutation.mutate({
       title,
+      description: description.trim(),
       type,
       targetDays,
       icon: selectedEmoji,
@@ -199,6 +205,7 @@ export default function ChallengesPage() {
             currentUserId={user?.id || ""}
             onCheckIn={() => checkInMutation.mutate(challenge.id)}
             isCheckingIn={checkInMutation.isPending}
+            onViewDetails={setSelectedChallenge}
           />
         ))
       )}
@@ -248,6 +255,19 @@ export default function ChallengesPage() {
             onChange={(e) => setTitle(e.target.value)}
             required
           />
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-white-muted uppercase tracking-wider block">
+              Description
+            </label>
+            <textarea
+              id="challengeDescription"
+              placeholder="What are the rules and details of this challenge?"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full bg-black-deep/40 border border-white/5 rounded-button py-2.5 px-3.5 text-sm text-white placeholder-white-muted/30 focus:outline-none focus:border-purple-warm/40 focus:ring-1 focus:ring-purple-warm/20 transition-all min-h-[80px] resize-y"
+            />
+          </div>
 
           {/* Type Picker */}
           <div className="space-y-2">
@@ -371,6 +391,174 @@ export default function ChallengesPage() {
           </Button>
         </form>
       </Modal>
+
+      {/* ─── Challenge Details Modal ─── */}
+      <Modal
+        isOpen={!!selectedChallenge}
+        onClose={() => setSelectedChallenge(null)}
+        title="Challenge Details"
+      >
+        {selectedChallenge && (() => {
+          const myParticipant = selectedChallenge.participants.find(
+            (p) => p.userId === user?.id
+          );
+          const partnerParticipant = selectedChallenge.participants.find(
+            (p) => p.userId !== user?.id
+          );
+
+          const daysElapsed = Math.max(
+            1,
+            Math.ceil(
+              (Date.now() - new Date(selectedChallenge.startDate).getTime()) / (1000 * 60 * 60 * 24)
+            )
+          );
+          const daysRemaining = Math.max(0, selectedChallenge.targetDays - daysElapsed);
+          
+          const typeInfo = CHALLENGE_TYPES.find((t) => t.value === selectedChallenge.type);
+
+          return (
+            <div className="space-y-5 text-left max-h-[75vh] overflow-y-auto pr-1">
+              {/* Cover Image */}
+              {selectedChallenge.imageUrl && (
+                <div className="w-full h-32 rounded-card overflow-hidden relative border border-white/5">
+                  <img src={selectedChallenge.imageUrl} alt={selectedChallenge.title} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black-card to-transparent" />
+                </div>
+              )}
+
+              {/* Main Info */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-3xl shrink-0">{selectedChallenge.icon || typeInfo?.emoji || "🔥"}</span>
+                  <div>
+                    <h3 className="font-display font-extrabold text-lg text-white-off leading-snug">
+                      {selectedChallenge.title}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Clock className="w-3.5 h-3.5 text-white-muted" />
+                      <span className="text-xs text-white-muted font-medium">
+                        {daysRemaining > 0 ? `${daysRemaining} days remaining` : "Finished"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Badge variant={selectedChallenge.status === "completed" ? "success" : "primary"}>
+                  {selectedChallenge.status === "completed" ? "Completed" : `Day ${Math.min(daysElapsed, selectedChallenge.targetDays)}/${selectedChallenge.targetDays}`}
+                </Badge>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold text-white-muted uppercase tracking-wider">
+                  Description
+                </h4>
+                <div className="p-3.5 rounded-button bg-white/[0.02] border border-white/5">
+                  <p className="text-xs text-white-muted leading-relaxed whitespace-pre-wrap">
+                    {selectedChallenge.description || "No description provided for this challenge."}
+                  </p>
+                </div>
+              </div>
+
+              {/* Participant Progress Cards */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-white-muted uppercase tracking-wider">
+                  Partner Standings
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[myParticipant, partnerParticipant].map((p) => {
+                    if (!p) return null;
+                    const isMe = p.userId === user?.id;
+                    const pct = Math.round((p.daysCompleted / selectedChallenge.targetDays) * 100);
+                    return (
+                      <div
+                        key={p.id}
+                        className={cn(
+                          "p-3 rounded-card bg-black-elevated/40 border flex items-center justify-between gap-3",
+                          isMe ? "border-lime-soft/10" : "border-purple-warm/10"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Avatar src={p.user.avatarUrl} name={p.user.username} size="sm" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-white truncate">
+                              {isMe ? "You" : `@${p.user.username}`}
+                            </p>
+                            <p className="text-[10px] text-white-muted font-medium mt-0.5">
+                              Checked in: {p.daysCompleted} days ({pct}%)
+                            </p>
+                          </div>
+                        </div>
+                        <span className={cn(
+                          "text-xs font-black shrink-0",
+                          isMe ? "text-lime-soft" : "text-purple-warm"
+                        )}>
+                          {p.daysCompleted} ★
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Accountability Grid */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-white-muted uppercase tracking-wider">
+                  Accountability Timeline
+                </h4>
+                <div className="grid grid-cols-7 gap-2 bg-black-deep/40 p-3 rounded-button border border-white/5">
+                  {Array.from({ length: selectedChallenge.targetDays }, (_, i) => {
+                    const myDone = (myParticipant?.daysCompleted || 0) > i;
+                    const partnerDone = (partnerParticipant?.daysCompleted || 0) > i;
+                    const bothDone = myDone && partnerDone;
+
+                    return (
+                      <div
+                        key={i}
+                        className={cn(
+                          "aspect-square rounded-card flex flex-col items-center justify-center text-[10px] font-bold border transition-all duration-300",
+                          bothDone
+                            ? "bg-gradient-to-br from-lime-soft to-purple-warm border-lime-soft/40 text-black shadow-glow-lime/10"
+                            : myDone
+                            ? "bg-lime-soft/15 border-lime-soft/30 text-lime-soft"
+                            : partnerDone
+                            ? "bg-purple-warm/15 border-purple-warm/30 text-purple-warm"
+                            : "bg-white/[0.02] border-white/5 text-white-muted/40"
+                        )}
+                        title={`Day ${i + 1}`}
+                      >
+                        <span>{i + 1}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[10px] font-semibold text-white-muted mt-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded bg-lime-soft/20 border border-lime-soft/30" />
+                    <span>You Checked In</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded bg-purple-warm/20 border border-purple-warm/30" />
+                    <span>Partner Checked In</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded bg-gradient-to-br from-lime-soft to-purple-warm" />
+                    <span>Both Checked In 🔥</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <Button
+                variant="secondary"
+                className="w-full mt-2"
+                onClick={() => setSelectedChallenge(null)}
+              >
+                Close Details
+              </Button>
+            </div>
+          );
+        })()}
+      </Modal>
     </div>
   );
 }
@@ -381,11 +569,13 @@ function ChallengeCard({
   currentUserId,
   onCheckIn,
   isCheckingIn,
+  onViewDetails,
 }: {
   challenge: Challenge;
   currentUserId: string;
   onCheckIn: () => void;
   isCheckingIn: boolean;
+  onViewDetails: (c: Challenge) => void;
 }) {
   const myParticipant = challenge.participants.find(
     (p) => p.userId === currentUserId
@@ -433,7 +623,10 @@ function ChallengeCard({
   const theme = getChallengeTheme(challenge.color);
 
   return (
-    <Card className={cn("text-left p-0 overflow-hidden border border-white/5", theme.border)}>
+    <Card
+      onClick={() => onViewDetails(challenge)}
+      className={cn("text-left p-0 overflow-hidden border border-white/5 cursor-pointer hover:bg-white/[0.01] transition-all", theme.border)}
+    >
       {challenge.imageUrl && (
         <div className="w-full h-28 overflow-hidden relative">
           <img src={challenge.imageUrl} alt={challenge.title} className="w-full h-full object-cover" />
@@ -541,7 +734,10 @@ function ChallengeCard({
         {!hasCheckedInToday ? (
           <Button
             className="w-full"
-            onClick={onCheckIn}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCheckIn();
+            }}
             isLoading={isCheckingIn}
           >
             <CheckCircle2 className="w-4 h-4 mr-1" />

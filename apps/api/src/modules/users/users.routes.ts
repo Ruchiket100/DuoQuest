@@ -123,6 +123,41 @@ export default async function usersRoutes(app: FastifyInstance) {
     }
   );
 
+  // Remove avatar
+  app.delete(
+    "/api/users/avatar",
+    { preHandler: requireAuth },
+    async (request) => {
+      const userId = request.user!.id;
+
+      // Reset user avatarUrl to null in DB
+      await app.prisma.user.update({
+        where: { id: userId },
+        data: { avatarUrl: null },
+      });
+
+      // Delete user's avatar files from Supabase Storage
+      if (app.supabase) {
+        try {
+          const { data: files } = await app.supabase.storage
+            .from("avatars")
+            .list(userId);
+          
+          if (files && files.length > 0) {
+            const filesToRemove = files.map((f) => `${userId}/${f.name}`);
+            await app.supabase.storage
+              .from("avatars")
+              .remove(filesToRemove);
+          }
+        } catch (err) {
+          app.log.error(err, "Failed to delete avatar files from storage");
+        }
+      }
+
+      return { success: true };
+    }
+  );
+
   // Log daily mood
   app.post(
     "/api/users/mood",

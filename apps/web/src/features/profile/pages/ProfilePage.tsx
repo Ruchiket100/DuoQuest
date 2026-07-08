@@ -11,16 +11,22 @@ import Badge from "@/components/ui/Badge.tsx";
 import ProgressBar from "@/components/ui/ProgressBar.tsx";
 import Modal from "@/components/ui/Modal.tsx";
 import Input from "@/components/ui/Input.tsx";
-import { LogOut, Settings, Award, Users, Camera, BarChart3 } from "lucide-react";
+import { LogOut, Settings, Award, Users, Camera, BarChart3, Trash2 } from "lucide-react";
+import { ACHIEVEMENT_DEFINITIONS } from "@duoquest/shared";
 import api from "@/lib/api.ts";
+import { cn } from "@/lib/utils.ts";
 
 export function ProfilePage() {
-  const { user, logout } = useAuthStore();
+  const { user: rawUser, logout } = useAuthStore();
+  const user = rawUser as any;
   const addToast = useUIStore();
   const navigate = useNavigate();
 
   const { activeDuoSpace, setActiveDuoSpace } = useDuoSpaceStore();
   const [isDuoModalOpen, setIsDuoModalOpen] = React.useState(false);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = React.useState(false);
+  const [isRemovingAvatar, setIsRemovingAvatar] = React.useState(false);
+  const [isAchievementsModalOpen, setIsAchievementsModalOpen] = React.useState(false);
   const [spaceName, setSpaceName] = React.useState("");
   const [isUpdating, setIsUpdating] = React.useState(false);
   
@@ -115,8 +121,9 @@ export function ProfilePage() {
       const formData = new FormData();
       formData.append("file", file);
       const result = await api.upload<{ avatarUrl: string }>("/api/users/avatar", formData);
-      // Update local state
-      useAuthStore.getState().setUser({ ...user!, avatarUrl: result.avatarUrl });
+      // Update local state with cache-busting query parameter
+      const bustedUrl = `${result.avatarUrl}?t=${Date.now()}`;
+      useAuthStore.getState().setUser({ ...user!, avatarUrl: bustedUrl });
       queryClient.invalidateQueries({ queryKey: ["userProfile"] });
       addToast.addToast("Avatar updated!", "success");
     } catch (err: any) {
@@ -124,6 +131,21 @@ export function ProfilePage() {
     } finally {
       setIsUploadingAvatar(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setIsRemovingAvatar(true);
+    try {
+      await api.delete("/api/users/avatar");
+      useAuthStore.getState().setUser({ ...user!, avatarUrl: null });
+      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+      addToast.addToast("Avatar removed!", "success");
+      setIsAvatarModalOpen(false);
+    } catch (err: any) {
+      addToast.addToast(err.message || "Failed to remove avatar", "error");
+    } finally {
+      setIsRemovingAvatar(false);
     }
   };
 
@@ -139,14 +161,14 @@ export function ProfilePage() {
       {/* Hero Profile Details */}
       <Card className="flex flex-col items-center text-center gap-4">
         {/* Avatar with upload overlay */}
-        <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+        <div className="relative group cursor-pointer" onClick={() => setIsAvatarModalOpen(true)}>
           <Avatar src={user.avatarUrl} name={user.displayName || user.username} size="xl" />
           {isUploadingAvatar ? (
             <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50">
               <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
             </div>
           ) : (
-            <div className="absolute bottom-0 right-0 bg-lime-soft text-black p-1.5 rounded-full shadow-md hover:scale-105 transition-transform z-10">
+            <div className="absolute top-0 right-0 bg-lime-soft text-black p-1.5 rounded-full shadow-md hover:scale-105 transition-transform z-10">
               <Camera className="w-3.5 h-3.5" />
             </div>
           )}
@@ -193,7 +215,10 @@ export function ProfilePage() {
           </Card>
         )}
 
-        <Card className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-all text-left">
+        <Card
+          onClick={() => setIsAchievementsModalOpen(true)}
+          className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-all text-left"
+        >
           <div className="flex items-center gap-3">
             <Award className="w-5 h-5 text-gold" />
             <div>
@@ -201,7 +226,9 @@ export function ProfilePage() {
               <p className="text-xs text-white-muted">Showcase your accountability awards</p>
             </div>
           </div>
-          <span className="text-xs text-white-muted font-bold">1 / 15 Unlocked</span>
+          <span className="text-xs text-white-muted font-bold">
+            {user.achievements?.length || 0} / {ACHIEVEMENT_DEFINITIONS.length} Unlocked
+          </span>
         </Card>
 
         <Card
@@ -293,6 +320,91 @@ export function ProfilePage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* ─── Achievements Modal ─── */}
+      <Modal isOpen={isAchievementsModalOpen} onClose={() => setIsAchievementsModalOpen(false)} title="Achievements">
+        <div className="space-y-4 text-left max-h-[60vh] overflow-y-auto pr-1">
+          <p className="text-xs text-white-muted mb-2 font-medium">
+            Unlock accountability awards by maintaining streaks, finishing goals, and working together.
+          </p>
+          <div className="grid grid-cols-1 gap-2.5">
+            {ACHIEVEMENT_DEFINITIONS.map((def) => {
+              const isUnlocked = user.achievements?.some(
+                (ua: any) => ua.achievement.key === def.key
+              );
+
+              return (
+                <div
+                  key={def.key}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-card border transition-all duration-200",
+                    isUnlocked
+                      ? "bg-purple-warm/5 border-purple-warm/25 shadow-glow-purple/5"
+                      : "bg-black-elevated/40 border-white/5 opacity-55 grayscale-[40%]"
+                  )}
+                >
+                  <div className="text-2xl">{def.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="font-bold text-sm text-white-off leading-none">
+                        {def.title}
+                      </h4>
+                      <span className={cn(
+                        "text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-[4px] tracking-wider leading-none shrink-0",
+                        isUnlocked
+                          ? "bg-lime-soft/10 text-lime-soft"
+                          : "bg-white/10 text-white-muted"
+                      )}>
+                        +{def.xpReward} XP
+                      </span>
+                    </div>
+                    <p className="text-xs text-white-muted mt-1 leading-snug">
+                      {def.description}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </Modal>
+
+      {/* ─── Avatar Options Modal ─── */}
+      <Modal isOpen={isAvatarModalOpen} onClose={() => setIsAvatarModalOpen(false)} title="Profile Picture">
+        <div className="space-y-3.5 text-center p-2">
+          <Button
+            variant="primary"
+            className="w-full flex items-center justify-center gap-2"
+            onClick={() => {
+              setIsAvatarModalOpen(false);
+              fileInputRef.current?.click();
+            }}
+          >
+            <Camera className="w-4 h-4" />
+            Upload New Photo
+          </Button>
+
+          {user.avatarUrl && (
+            <Button
+              variant="danger"
+              className="w-full flex items-center justify-center gap-2"
+              onClick={handleRemoveAvatar}
+              isLoading={isRemovingAvatar}
+            >
+              <Trash2 className="w-4 h-4" />
+              Remove Current Photo
+            </Button>
+          )}
+
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={() => setIsAvatarModalOpen(false)}
+          >
+            Cancel
+          </Button>
+        </div>
       </Modal>
     </div>
   );

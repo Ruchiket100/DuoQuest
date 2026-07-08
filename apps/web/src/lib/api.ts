@@ -1,4 +1,5 @@
 import type { ApiResponse } from "@duoquest/shared";
+import { useAuthStore } from "@/stores/authStore.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -47,6 +48,13 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      useAuthStore.getState().logout();
+      const path = window.location.pathname;
+      if (path !== "/login" && path !== "/register" && path !== "/onboarding") {
+        window.location.href = "/login";
+      }
+    }
     const errorCode = result?.error?.code || result?.code || "HTTP_ERROR";
     const errorMessage = result?.error?.message || result?.message || response.statusText || "Something went wrong";
     throw new ApiError(response.status, errorCode, errorMessage);

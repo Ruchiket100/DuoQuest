@@ -8,7 +8,8 @@ import Input from "@/components/ui/Input.tsx";
 import Button from "@/components/ui/Button.tsx";
 import Card from "@/components/ui/Card.tsx";
 import Avatar from "@/components/ui/Avatar.tsx";
-import { Camera } from "lucide-react";
+import { Camera, Trash2 } from "lucide-react";
+import Modal from "@/components/ui/Modal.tsx";
 import type { DuoSpace } from "@duoquest/shared";
 
 export function OnboardingPage() {
@@ -23,6 +24,8 @@ export function OnboardingPage() {
 
   const [isLoading, setIsLoading] = React.useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = React.useState(false);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = React.useState(false);
+  const [isRemovingAvatar, setIsRemovingAvatar] = React.useState(false);
 
   const { user, setUser } = useAuthStore();
   const setActiveDuoSpace = useDuoSpaceStore((state) => state.setActiveDuoSpace);
@@ -46,7 +49,9 @@ export function OnboardingPage() {
       const formData = new FormData();
       formData.append("file", file);
       const result = await api.upload<{ avatarUrl: string }>("/api/users/avatar", formData);
-      setAvatarUrl(result.avatarUrl);
+      const bustedUrl = `${result.avatarUrl}?t=${Date.now()}`;
+      setAvatarUrl(bustedUrl);
+      setUser({ ...user!, avatarUrl: result.avatarUrl });
       addToast("Avatar uploaded! 📸", "success");
     } catch (err: any) {
       addToast(err.message || "Failed to upload avatar", "error");
@@ -56,13 +61,29 @@ export function OnboardingPage() {
     }
   };
 
+  const handleRemoveAvatar = async () => {
+    setIsRemovingAvatar(true);
+    try {
+      await api.delete("/api/users/avatar");
+      setAvatarUrl("");
+      setUser({ ...user!, avatarUrl: null });
+      addToast("Avatar removed! 🗑️", "success");
+      setIsAvatarModalOpen(false);
+    } catch (err: any) {
+      addToast(err.message || "Failed to remove avatar", "error");
+    } finally {
+      setIsRemovingAvatar(false);
+    }
+  };
+
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
+      const cleanAvatarUrl = avatarUrl ? avatarUrl.split("?")[0] : null;
       const updatedUser = await api.patch<any>("/api/users/me", {
         displayName,
-        avatarUrl: avatarUrl || undefined,
+        avatarUrl: cleanAvatarUrl,
         theme,
       });
       setUser(updatedUser);
@@ -132,14 +153,14 @@ export function OnboardingPage() {
             <form onSubmit={handleProfileSubmit} className="space-y-6">
               {/* Interactive Bucket Uploader */}
               <div className="flex flex-col items-center gap-3">
-                <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                <div className="relative group cursor-pointer" onClick={() => setIsAvatarModalOpen(true)}>
                   <Avatar src={avatarUrl} name={displayName || user?.username} size="xl" />
                   {isUploadingAvatar ? (
                     <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50">
                       <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
                     </div>
                   ) : (
-                    <div className="absolute bottom-0 right-0 bg-lime-soft text-black p-1.5 rounded-full shadow-md hover:scale-105 transition-transform z-10">
+                    <div className="absolute top-0 right-0 bg-lime-soft text-black p-1.5 rounded-full shadow-md hover:scale-105 transition-transform z-10">
                       <Camera className="w-3.5 h-3.5" />
                     </div>
                   )}
@@ -257,6 +278,43 @@ export function OnboardingPage() {
           </Card>
         )}
       </div>
+
+      {/* ─── Avatar Options Modal ─── */}
+      <Modal isOpen={isAvatarModalOpen} onClose={() => setIsAvatarModalOpen(false)} title="Profile Picture">
+        <div className="space-y-3.5 text-center p-2">
+          <Button
+            variant="primary"
+            className="w-full flex items-center justify-center gap-2"
+            onClick={() => {
+              setIsAvatarModalOpen(false);
+              fileInputRef.current?.click();
+            }}
+          >
+            <Camera className="w-4 h-4" />
+            Upload New Photo
+          </Button>
+
+          {avatarUrl && (
+            <Button
+              variant="danger"
+              className="w-full flex items-center justify-center gap-2"
+              onClick={handleRemoveAvatar}
+              isLoading={isRemovingAvatar}
+            >
+              <Trash2 className="w-4 h-4" />
+              Remove Current Photo
+            </Button>
+          )}
+
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={() => setIsAvatarModalOpen(false)}
+          >
+            Cancel
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
