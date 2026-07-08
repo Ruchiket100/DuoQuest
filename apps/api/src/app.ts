@@ -4,6 +4,7 @@ import { registerRoutes } from "./modules/index.js";
 
 export async function buildApp() {
   const app = Fastify({
+    trustProxy: true,
     logger: {
       level: process.env.NODE_ENV === "production" ? "info" : "debug",
       transport:
