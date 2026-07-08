@@ -10,6 +10,7 @@ import ProgressBar from "@/components/ui/ProgressBar.tsx";
 import Badge from "@/components/ui/Badge.tsx";
 import Input from "@/components/ui/Input.tsx";
 import Avatar from "@/components/ui/Avatar.tsx";
+import Modal from "@/components/ui/Modal.tsx";
 import { ArrowLeft, CheckCircle, Trash2, Calendar, Plus, Target } from "lucide-react";
 import { cn } from "@/lib/utils.ts";
 import type { Goal, Milestone, GoalNote, Task } from "@duoquest/shared";
@@ -28,6 +29,7 @@ export function GoalDetailPage() {
   const [scheduleType, setScheduleType] = React.useState<"days" | "date">("days");
   const [selectedDays, setSelectedDays] = React.useState<string[]>(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
   const [dueDateText, setDueDateText] = React.useState("");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
 
   const duoSpaceId = activeDuoSpace?.id;
 
@@ -145,6 +147,8 @@ export function GoalDetailPage() {
   const deleteGoalMutation = useMutation({
     mutationFn: () => api.delete(`/api/goals/${id}`),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["goals", duoSpaceId] });
+      queryClient.invalidateQueries({ queryKey: ["duoOverview", duoSpaceId] });
       addToast.addToast("Goal deleted", "info");
       navigate("/goals");
     },
@@ -204,11 +208,7 @@ export function GoalDetailPage() {
           variant="ghost"
           size="sm"
           className="text-red-accent hover:bg-red-accent/10 flex items-center gap-1"
-          onClick={() => {
-            if (confirm("Are you sure you want to delete this goal?")) {
-              deleteGoalMutation.mutate();
-            }
-          }}
+          onClick={() => setIsDeleteModalOpen(true)}
         >
           <Trash2 className="w-4 h-4" />
           <span>Delete</span>
@@ -529,6 +529,40 @@ export function GoalDetailPage() {
           )}
         </div>
       </Card>
+
+      {/* ─── Delete Confirmation Modal ─── */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Delete Goal"
+      >
+        <div className="space-y-4 text-left p-2">
+          <p className="text-sm text-white-muted">
+            Are you sure you want to delete this goal? This action is permanent and cannot be undone.
+          </p>
+          <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
+            <Button
+              variant="danger"
+              className="w-full flex items-center justify-center gap-2"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                deleteGoalMutation.mutate();
+              }}
+              isLoading={deleteGoalMutation.isPending}
+            >
+              <Trash2 className="w-4 h-4" />
+              Yes, Delete Goal
+            </Button>
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
