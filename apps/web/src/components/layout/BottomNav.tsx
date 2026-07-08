@@ -1,4 +1,4 @@
-import { NavLink } from "react-router";
+import { NavLink, useLocation } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Home, Target, MessageSquare, Trophy, Bell, User, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils.ts";
@@ -38,6 +38,10 @@ export function BottomNav() {
     { to: "/profile", icon: User, label: "Profile" },
   ];
 
+  const location = useLocation();
+
+  const floatingNavs = location.pathname !== "/";
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 h-16 z-40 glass-nav flex items-center justify-around px-2 pb-safe">
       {navItems.map(({ to, icon: Icon, label }) => (
@@ -61,6 +65,7 @@ export function BottomNav() {
       {/* Journal - floating FAB above nav on the right */}
       <NavLink
         to="/journal"
+        hidden={floatingNavs}
         className={({ isActive }) =>
           cn(
             "fixed bottom-32 right-6 w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 shadow-float z-45 border cursor-pointer",
@@ -81,6 +86,7 @@ export function BottomNav() {
       {/* Notification bell - floating FAB above nav */}
       <NavLink
         to="/notifications"
+        hidden={floatingNavs}
         className={({ isActive }) =>
           cn(
             "fixed bottom-20 right-6 w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 shadow-float z-45 border cursor-pointer",
