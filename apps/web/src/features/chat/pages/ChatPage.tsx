@@ -10,6 +10,8 @@ import Avatar from "@/components/ui/Avatar.tsx";
 import { Send, Bell } from "lucide-react";
 import type { Message } from "@duoquest/shared";
 
+import { useUIStore } from "@/stores/uiStore.ts";
+
 // Create client helper (conditional matching schema/VITE_ envs)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
@@ -19,6 +21,7 @@ export function ChatPage() {
   const { user } = useAuthStore();
   const { activeDuoSpace } = useDuoSpaceStore();
   const queryClient = useQueryClient();
+  const addToast = useUIStore();
 
   const [messageText, setMessageText] = React.useState("");
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
@@ -31,15 +34,62 @@ export function ChatPage() {
     enabled: !!duoSpaceId,
   });
 
-  // Send Message Mutation
+  // Send Message Mutation (OPTIMISTIC UPDATE)
   const sendMessageMutation = useMutation({
     mutationFn: (content: string) =>
       api.post<Message>(`/api/duo-spaces/${duoSpaceId}/messages`, { content, type: "text" }),
-    onSuccess: (newMessage: Message) => {
-      setMessageText("");
-      // Optimistic update or manual refetch
-      queryClient.setQueryData<Message[]>(["chatHistory", duoSpaceId], (old = []) => [...old, newMessage]);
+    onMutate: async (content) => {
+      // Cancel outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ["chatHistory", duoSpaceId] });
+
+      // Snapshot the previous chat history
+      const previousMessages = queryClient.getQueryData<Message[]>(["chatHistory", duoSpaceId]) || [];
+
+      // Create an optimistic message object
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        duoSpaceId: duoSpaceId || "",
+        senderId: user?.id || "",
+        content,
+        type: "text",
+        createdAt: new Date().toISOString(),
+        sender: {
+          id: user?.id || "",
+          username: user?.username || "You",
+          avatarUrl: user?.avatarUrl || null,
+        } as any,
+      };
+
+      // Set the optimistic state in the query cache
+      queryClient.setQueryData<Message[]>(["chatHistory", duoSpaceId], (old = []) => [
+        ...old,
+        optimisticMessage,
+      ]);
+
+      // Scroll to bottom immediately
       scrollToBottom();
+
+      return { previousMessages };
+    },
+    onError: (err: any, _content, context) => {
+      // Rollback to previous state on error
+      if (context?.previousMessages) {
+        queryClient.setQueryData(["chatHistory", duoSpaceId], context.previousMessages);
+      }
+      addToast.addToast(err.message || "Failed to send message", "error");
+    },
+    onSuccess: (newMessage: Message) => {
+      // Replace the optimistic message with the resolved message from the server
+      queryClient.setQueryData<Message[]>(["chatHistory", duoSpaceId], (old = []) => {
+        return old.map((msg) =>
+          msg.id.startsWith("temp-") && msg.content === newMessage.content ? newMessage : msg
+        );
+      });
+      scrollToBottom();
+    },
+    onSettled: () => {
+      // Invalidate query to ensure full server sync
+      queryClient.invalidateQueries({ queryKey: ["chatHistory", duoSpaceId] });
     },
   });
 
@@ -85,8 +135,10 @@ export function ChatPage() {
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageText.trim()) return;
-    sendMessageMutation.mutate(messageText);
+    const content = messageText.trim();
+    if (!content) return;
+    setMessageText("");
+    sendMessageMutation.mutate(content);
   };
 
   if (!duoSpaceId) {
