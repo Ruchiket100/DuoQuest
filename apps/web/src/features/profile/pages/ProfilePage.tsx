@@ -27,10 +27,21 @@ export function ProfilePage() {
   const [isAvatarModalOpen, setIsAvatarModalOpen] = React.useState(false);
   const [isRemovingAvatar, setIsRemovingAvatar] = React.useState(false);
   const [isAchievementsModalOpen, setIsAchievementsModalOpen] = React.useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = React.useState(false);
+  const [editDisplayName, setEditDisplayName] = React.useState("");
+  const [editTheme, setEditTheme] = React.useState("default");
+  const [isSavingProfile, setIsSavingProfile] = React.useState(false);
   const [spaceName, setSpaceName] = React.useState("");
   const [isUpdating, setIsUpdating] = React.useState(false);
   
   const queryClient = useQueryClient();
+
+  React.useEffect(() => {
+    if (user) {
+      setEditDisplayName(user.displayName || "");
+      setEditTheme(user.theme || "default");
+    }
+  }, [user, isEditProfileOpen]);
 
   // Query cached overview to retrieve member list
   const { data: overview } = useQuery<any>({
@@ -148,7 +159,23 @@ export function ProfilePage() {
       setIsRemovingAvatar(false);
     }
   };
-
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    try {
+      const updatedUser = await api.patch<any>("/api/users/me", {
+        displayName: editDisplayName.trim(),
+        theme: editTheme,
+      });
+      useAuthStore.getState().setUser(updatedUser);
+      addToast.addToast("Profile updated successfully!", "success");
+      setIsEditProfileOpen(false);
+    } catch (err: any) {
+      addToast.addToast(err.message || "Failed to save profile", "error");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
   if (!user) return null;
 
   return (
@@ -244,7 +271,10 @@ export function ProfilePage() {
           </div>
         </Card>
 
-        <Card className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-all text-left">
+        <Card
+          onClick={() => setIsEditProfileOpen(true)}
+          className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-all text-left"
+        >
           <div className="flex items-center gap-3">
             <Settings className="w-5 h-5 text-white-muted" />
             <div>
@@ -405,6 +435,61 @@ export function ProfilePage() {
             Cancel
           </Button>
         </div>
+      </Modal>
+
+      {/* ─── Edit Profile Modal ─── */}
+      <Modal isOpen={isEditProfileOpen} onClose={() => setIsEditProfileOpen(false)} title="Edit Profile">
+        <form onSubmit={handleSaveProfile} className="space-y-4 text-left">
+          <Input
+            id="editDisplayNameInput"
+            type="text"
+            label="Display Name"
+            value={editDisplayName}
+            onChange={(e) => setEditDisplayName(e.target.value)}
+            placeholder="Enter your display name"
+            required
+          />
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-white-muted uppercase tracking-wider block">
+              Choose App Theme
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { value: "default", label: "Default" },
+                { value: "dark", label: "Midnight" },
+                { value: "purple", label: "Amethyst" },
+              ].map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setEditTheme(t.value)}
+                  className={cn(
+                    "py-2.5 px-2 rounded-button border text-xs font-bold transition-all duration-200 cursor-pointer",
+                    editTheme === t.value
+                      ? "border-purple-warm/50 bg-purple-warm/10 text-purple-warm"
+                      : "border-white/5 bg-white/[0.02] text-white-muted hover:bg-white/5"
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 pt-4 border-t border-white/5">
+            <Button type="submit" isLoading={isSavingProfile}>
+              Save Profile Changes
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsEditProfileOpen(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );
