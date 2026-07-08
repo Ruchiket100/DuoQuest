@@ -4,9 +4,14 @@ const config: CapacitorConfig = {
   appId: "com.duoquest",
   appName: "DuoQuest",
   webDir: "dist",
-  server: {
-    androidScheme: "https",
-  },
+  server: process.env.CAPACITOR_LIVE_RELOAD
+    ? {
+        url: process.env.CAPACITOR_LIVE_RELOAD,
+        cleartext: true,
+      }
+    : {
+        androidScheme: "https",
+      },
   plugins: {
     CapacitorCookies: {
       enabled: true,
