@@ -11,7 +11,8 @@
     "db:generate": "pnpm --filter @duoquest/api prisma generate",
     "db:studio": "pnpm --filter @duoquest/api prisma studio",
     "app:run:android": "pnpm --filter @duoquest/web run cap:run:android",
-    "app:run:android:reload": "pnpm --filter @duoquest/web run cap:run:android:reload"
+    "app:run:android:reload": "pnpm --filter @duoquest/web run cap:run:android:reload",
+    "app:build:release": "pnpm --filter @duoquest/web run cap:build:release"
   },
   "devDependencies": {
     "turbo": "^2.5.0",
