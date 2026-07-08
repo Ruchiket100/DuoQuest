@@ -158,7 +158,7 @@ export function JournalPage() {
                       {entry.type === "private" ? "private" : "shared"}
                     </Badge>
                     {entry.userId === user?.id && (
-                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                      <div className="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-all duration-200">
                         <button
                           onClick={() => navigate(`/journal/edit/${entry.id}`)}
                           className="p-1 rounded-card text-white-muted hover:text-lime-soft hover:bg-lime-soft/10 transition-colors cursor-pointer"
