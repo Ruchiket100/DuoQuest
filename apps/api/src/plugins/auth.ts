@@ -21,7 +21,12 @@ export default fp(async (app: FastifyInstance) => {
     database: prismaAdapter(app.prisma, { provider: "postgresql" }),
     baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3001",
     secret: process.env.BETTER_AUTH_SECRET || "dev-secret-change-me",
-    trustedOrigins: ["http://localhost:5173"],
+    trustedOrigins: [
+      "http://localhost:5173",
+      "http://localhost",
+      "https://localhost",
+      "capacitor://localhost"
+    ],
     emailAndPassword: {
       enabled: true,
     },
