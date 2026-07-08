@@ -31,6 +31,16 @@ export default fp(async (app: FastifyInstance) => {
   if (betterAuthApiKey) {
     betterAuthApiKey = betterAuthApiKey.trim().replace(/^["']|["']$/g, "").replace(/^\\"|\\"$/g, "");
   }
+  // TODO: REMOVE THIS LOGGING BLOCK BEFORE PRODUCTION RELEASE (Security Risk)
+  app.log.info({
+    loadedUrl: betterAuthUrl,
+    loadedSecretLength: betterAuthSecret?.length,
+    loadedSecretPreview: betterAuthSecret ? `${betterAuthSecret.slice(0, 5)}...${betterAuthSecret.slice(-5)}` : null,
+    loadedApiKeyLength: betterAuthApiKey?.length,
+    loadedApiKeyPreview: betterAuthApiKey ? `${betterAuthApiKey.slice(0, 5)}...${betterAuthApiKey.slice(-5)}` : null,
+    rawEnvApiKeyLength: process.env.BETTER_AUTH_API_KEY?.length,
+    rawEnvApiKeyPreview: process.env.BETTER_AUTH_API_KEY ? `${process.env.BETTER_AUTH_API_KEY.slice(0, 5)}...${process.env.BETTER_AUTH_API_KEY.slice(-5)}` : null,
+  }, "🛠️ Better Auth Environment Debug Log");
 
   const auth = betterAuth({
     database: prismaAdapter(app.prisma, { provider: "postgresql" }),
