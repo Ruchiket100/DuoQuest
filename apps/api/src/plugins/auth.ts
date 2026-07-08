@@ -40,7 +40,8 @@ export default fp(async (app: FastifyInstance) => {
       "http://localhost:5173",
       "http://localhost",
       "https://localhost",
-      "capacitor://localhost"
+      "capacitor://localhost",
+      "https://duoquest-ap.onrender.com"
     ],
     plugins: [
       dash({
