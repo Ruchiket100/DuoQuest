@@ -47,8 +47,8 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
-    const errorCode = result?.error?.code || "HTTP_ERROR";
-    const errorMessage = result?.error?.message || response.statusText || "Something went wrong";
+    const errorCode = result?.error?.code || result?.code || "HTTP_ERROR";
+    const errorMessage = result?.error?.message || result?.message || response.statusText || "Something went wrong";
     throw new ApiError(response.status, errorCode, errorMessage);
   }
 
