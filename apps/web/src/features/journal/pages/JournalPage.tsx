@@ -70,16 +70,11 @@ export function JournalPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header section */}
       <div className="flex items-center justify-between">
         <div className="space-y-1 text-left">
           <h1 className="font-display font-extrabold text-2xl text-white-off">Duo Journal</h1>
           <p className="text-sm text-white-muted">Reflect, track thoughts, and write space diaries together.</p>
         </div>
-        <Button className="flex items-center gap-1" onClick={() => navigate("/journal/new")}>
-          <Plus className="w-4 h-4" />
-          <span>New Entry</span>
-        </Button>
       </div>
 
       {/* Tabs Layout */}
@@ -228,6 +223,18 @@ export function JournalPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Floating Action Button (FAB) */}
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-md pointer-events-none z-30">
+        <div className="absolute right-4 bottom-0 pointer-events-auto">
+          <Button 
+            className="shadow-float flex items-center justify-center w-12 h-12 rounded-full bg-purple-warm hover:bg-purple-deep border border-purple-deep text-white" 
+            onClick={() => navigate("/journal/new")}
+          >
+            <Plus className="w-6 h-6" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

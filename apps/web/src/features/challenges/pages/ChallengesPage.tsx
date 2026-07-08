@@ -163,7 +163,6 @@ export default function ChallengesPage() {
 
   return (
     <div className="space-y-6 pb-20">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-white">
@@ -174,10 +173,6 @@ export default function ChallengesPage() {
             Push each other with timed challenges
           </p>
         </div>
-        <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-          <Plus className="w-4 h-4 mr-1" />
-          New
-        </Button>
       </div>
 
       {/* Active Challenges */}
@@ -559,6 +554,18 @@ export default function ChallengesPage() {
           );
         })()}
       </Modal>
+
+      {/* Floating Action Button (FAB) */}
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-md pointer-events-none z-30">
+        <div className="absolute right-4 bottom-0 pointer-events-auto">
+          <Button 
+            className="shadow-float flex items-center justify-center w-12 h-12 rounded-full bg-purple-warm hover:bg-purple-deep border border-purple-deep text-white" 
+            onClick={() => setIsCreateOpen(true)}
+          >
+            <Plus className="w-6 h-6" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
