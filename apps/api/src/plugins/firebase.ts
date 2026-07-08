@@ -17,15 +17,20 @@ export default fp(async (app: FastifyInstance) => {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
   if (privateKey) {
-    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-      privateKey = privateKey.slice(1, -1);
-    }
+    privateKey = privateKey.trim();
+    privateKey = privateKey.replace(/^["']|["']$/g, "");
+    privateKey = privateKey.replace(/^\\"|\\"$/g, "");
     privateKey = privateKey.replace(/\\n/g, "\n");
+    privateKey = privateKey.replace(/\\\\n/g, "\n");
   }
 
-  if (!projectId || !clientEmail || !privateKey) {
+  const isValidKey = privateKey && 
+    privateKey.includes("-----BEGIN PRIVATE KEY-----") && 
+    privateKey.includes("-----END PRIVATE KEY-----");
+
+  if (!projectId || !clientEmail || !privateKey || !isValidKey) {
     app.log.warn(
-      "⚠️  Firebase configuration missing — Push Notifications will be disabled."
+      "⚠️  Firebase configuration missing or private key is invalid — Push Notifications will be disabled."
     );
     app.decorate("sendPush", async () => {
       app.log.info("Push notification skipped (Firebase disabled).");
