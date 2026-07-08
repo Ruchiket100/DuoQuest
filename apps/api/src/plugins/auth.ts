@@ -2,6 +2,7 @@ import fp from "fastify-plugin";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { fromNodeHeaders } from "better-auth/node";
+import { dash } from "@better-auth/infra";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import type { Session, User } from "better-auth";
 
@@ -26,6 +27,9 @@ export default fp(async (app: FastifyInstance) => {
       "http://localhost",
       "https://localhost",
       "capacitor://localhost"
+    ],
+    plugins: [
+      dash(),
     ],
     emailAndPassword: {
       enabled: true,
