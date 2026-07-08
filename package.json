@@ -9,7 +9,8 @@
     "db:migrate": "pnpm --filter @duoquest/api prisma migrate dev",
     "db:push": "pnpm --filter @duoquest/api prisma db push",
     "db:generate": "pnpm --filter @duoquest/api prisma generate",
-    "db:studio": "pnpm --filter @duoquest/api prisma studio"
+    "db:studio": "pnpm --filter @duoquest/api prisma studio",
+    "app:run:android": "pnpm --filter @duoquest/web run cap:run:android"
   },
   "devDependencies": {
     "turbo": "^2.5.0",

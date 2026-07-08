@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "cap:sync": "tsc && vite build && cap sync",
     "cap:open:ios": "cap open ios",
-    "cap:open:android": "cap open android"
+    "cap:open:android": "cap open android",
+    "cap:run:android": "tsc && vite build && cap sync && cd android && ./gradlew assembleDebug && adb install -r app/build/outputs/apk/debug/app-debug.apk && adb shell am start -n com.duoquest/com.duoquest.app.MainActivity"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
