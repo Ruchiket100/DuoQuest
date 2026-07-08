@@ -126,3 +126,25 @@ body {
 .animate-shake {
   animation: shake 0.6s cubic-bezier(.36,.07,.19,.97) both;
 }
+
+/* Theme Custom Color Variables Overrides */
+[data-theme="purple"], [data-theme="violet"] {
+  --color-lime-soft: #c084fc;       /* Soft Purple */
+  --color-lime-hover: #a855f7;      /* Vivid Purple */
+  --color-purple-warm: #f472b6;     /* Rose Pink */
+  --color-purple-deep: #db2777;     /* Deep Pink */
+}
+
+[data-theme="dark"] {
+  --color-lime-soft: #60a5fa;       /* Blue */
+  --color-lime-hover: #3b82f6;      /* Blue hover */
+  --color-purple-warm: #c084fc;     /* Purple accent */
+  --color-purple-deep: #9333ea;
+}
+
+[data-theme="emerald"] {
+  --color-lime-soft: #34d399;       /* Emerald */
+  --color-lime-hover: #059669;      /* Deep Emerald */
+  --color-purple-warm: #2dd4bf;     /* Teal */
+  --color-purple-deep: #0d9488;
+}

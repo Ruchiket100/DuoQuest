@@ -43,6 +43,14 @@ export function ProfilePage() {
     }
   }, [user, isEditProfileOpen]);
 
+  React.useEffect(() => {
+    if (isEditProfileOpen) {
+      document.documentElement.setAttribute("data-theme", editTheme);
+    } else if (user) {
+      document.documentElement.setAttribute("data-theme", user.theme || "default");
+    }
+  }, [editTheme, isEditProfileOpen, user]);
+
   // Query cached overview to retrieve member list
   const { data: overview } = useQuery<any>({
     queryKey: ["duoOverview", activeDuoSpace?.id],

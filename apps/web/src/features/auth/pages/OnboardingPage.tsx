@@ -41,6 +41,13 @@ export function OnboardingPage() {
     }
   }, [user]);
 
+  React.useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    return () => {
+      document.documentElement.removeAttribute("data-theme");
+    };
+  }, [theme]);
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;

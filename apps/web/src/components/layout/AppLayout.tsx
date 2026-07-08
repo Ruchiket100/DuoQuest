@@ -11,8 +11,16 @@ import ToastContainer from "@/components/ui/Toast.tsx";
 import { registerPushNotifications } from "@/lib/pushNotification.ts";
 
 export function AppLayout() {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, user } = useAuthStore();
   const { activeDuoSpace, setActiveDuoSpace } = useDuoSpaceStore();
+
+  React.useEffect(() => {
+    if (user?.theme) {
+      document.documentElement.setAttribute("data-theme", user.theme);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+  }, [user?.theme]);
 
   // Load user profile globally if authenticated
   const { data: profileData } = useQuery<any>({
