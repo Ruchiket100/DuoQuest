@@ -58,6 +58,10 @@ export default fp(async (app: FastifyInstance) => {
         maxAge: 60 * 60 * 24 * 7, // 7 days
       },
     },
+    cookie: process.env.NODE_ENV === "production" ? {
+      sameSite: "none",
+      secure: true,
+    } : undefined,
     user: {
       additionalFields: {
         username: {
