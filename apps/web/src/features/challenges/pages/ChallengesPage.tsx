@@ -94,10 +94,7 @@ export default function ChallengesPage() {
       try {
         const formData = new FormData();
         formData.append("file", coverImageFile);
-        const res = await api.post<any>(`/api/duo-spaces/${duoSpaceId}/upload-cover`, {
-          method: "POST",
-          body: formData,
-        });
+        const res = await api.upload<{ imageUrl: string }>(`/api/duo-spaces/${duoSpaceId}/upload-cover`, formData);
         if (res.imageUrl) {
           imageUrl = res.imageUrl;
         }
