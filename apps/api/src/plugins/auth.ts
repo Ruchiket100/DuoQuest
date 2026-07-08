@@ -42,6 +42,15 @@ export default fp(async (app: FastifyInstance) => {
     rawEnvApiKeyPreview: process.env.BETTER_AUTH_API_KEY ? `${process.env.BETTER_AUTH_API_KEY.slice(0, 5)}...${process.env.BETTER_AUTH_API_KEY.slice(-5)}` : null,
   }, "🛠️ Better Auth Environment Debug Log");
 
+  console.log("🛠️ Better Auth Env Debug Console Log:");
+  console.log(`- loadedUrl: ${betterAuthUrl}`);
+  console.log(`- loadedSecretLength: ${betterAuthSecret?.length}`);
+  console.log(`- loadedSecretPreview: ${betterAuthSecret ? `${betterAuthSecret.slice(0, 5)}...${betterAuthSecret.slice(-5)}` : 'missing'}`);
+  console.log(`- loadedApiKeyLength: ${betterAuthApiKey?.length}`);
+  console.log(`- loadedApiKeyPreview: ${betterAuthApiKey ? `${betterAuthApiKey.slice(0, 5)}...${betterAuthApiKey.slice(-5)}` : 'missing'}`);
+  console.log(`- rawEnvApiKeyLength: ${process.env.BETTER_AUTH_API_KEY?.length}`);
+  console.log(`- rawEnvApiKeyPreview: ${process.env.BETTER_AUTH_API_KEY ? `${process.env.BETTER_AUTH_API_KEY.slice(0, 5)}...${process.env.BETTER_AUTH_API_KEY.slice(-5)}` : 'missing'}`);
+
   const auth = betterAuth({
     database: prismaAdapter(app.prisma, { provider: "postgresql" }),
     baseURL: betterAuthUrl,
